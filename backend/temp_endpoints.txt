@@ -1,0 +1,94 @@
+@app.route('/api/products/all', methods=['GET'])
+def get_all_products():
+    """
+    Get all products from Amazon and Flipkart
+    
+    Query Parameters:
+    - category: product category (optional)
+    - source: amazon|flipkart|both (default: both)
+    - limit: number of results (default: 60)
+    """
+    try:
+        category = request.args.get('category', 'all')
+        source = request.args.get('source', 'both')
+        limit = int(request.args.get('limit', 60))
+        
+        products = []
+        
+        if category and category != 'all':
+            # Fetch by specific category
+            products = product_api_service.get_products_by_category(
+                category=category,
+                source=source,
+                max_results=limit
+            )
+        else:
+            # Fetch from multiple categories
+            categories = [
+                'Casual Wear', 'Formal Wear', 'Streetwear',
+                'Athletic Wear', 'Party Wear', 'Traditional Wear'
+            ]
+            
+            per_category = limit // len(categories)
+            
+            for cat in categories:
+                cat_products = product_api_service.get_products_by_category(
+                    category=cat,
+                    source=source,
+                    max_results=per_category
+                )
+                products.extend(cat_products)
+        
+        # Limit to requested amount
+        products = products[:limit]
+        
+        return jsonify({
+            'status': 'success',
+            'count': len(products),
+            'products': products,
+            'message': f'All products from {source}'
+        })
+        
+    except Exception as e:
+        app.logger.error(f'Error in get_all_products: {str(e)}')
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/products/category/<category>', methods=['GET'])
+def get_products_by_category(category):
+    """
+    Get products by category from Amazon and Flipkart
+    
+    Path Parameters:
+    - category: product category
+    
+    Query Parameters:
+    - source: amazon|flipkart|both (default: both)
+    - limit: number of results (default: 30)
+    """
+    try:
+        source = request.args.get('source', 'both')
+        limit = int(request.args.get('limit', 30))
+        
+        products = product_api_service.get_products_by_category(
+            category=category,
+            source=source,
+            max_results=limit
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'count': len(products),
+            'products': products,
+            'category': category,
+            'message': f'{category} products from {source}'
+        })
+        
+    except Exception as e:
+        app.logger.error(f'Error in get_products_by_category: {str(e)}')
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
