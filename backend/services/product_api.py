@@ -1,10 +1,11 @@
 """
-Product API Service - Integration with RapidAPI for real Amazon and Flipkart products
+Product API Service - Integration with Platzi Fake Store API for fashion products
 """
 import requests
 import os
 from datetime import datetime, timedelta
 import json
+from services.platzi_api import PlatziAPI
 
 class ProductAPIService:
     """
@@ -23,25 +24,14 @@ class ProductAPIService:
     """
     
     def __init__(self):
-        self.rapidapi_key = os.getenv('RAPIDAPI_KEY', '')
-        
-        # API endpoints
-        self.amazon_api_base = "https://real-time-amazon-data.p.rapidapi.com"
-        self.flipkart_api_base = "https://flipkart-scraper-api.p.rapidapi.com"
+        # Initialize Platzi Fake Store API (free, no credentials required)
+        self.platzi_api = PlatziAPI()
         
         # Cache configuration
         self.cache = {}
         self.cache_ttl = timedelta(hours=6)  # Cache for 6 hours
         
-        # Rate limiting
-        self.request_count = 0
-        self.max_requests_per_hour = 50  # Free tier limit
-        
-        if not self.rapidapi_key:
-            print("⚠️  RAPIDAPI_KEY not set. Please add it to .env file")
-            print("Get your free API key at: https://rapidapi.com/")
-        else:
-            print(f"✓ RapidAPI key loaded: {self.rapidapi_key[:10]}...")
+        print("✓ Using Platzi Fake Store API (200+ products, free, unlimited, no credentials required)")
     
     def _get_cache_key(self, api_type, query, **kwargs):
         """Generate cache key from parameters"""
@@ -60,35 +50,109 @@ class ProductAPIService:
         """Store data in cache"""
         self.cache[cache_key] = (data, datetime.now())
     
-    def _make_request(self, url, params=None, headers=None):
-        """Make API request with error handling"""
-        if not self.rapidapi_key:
-            raise Exception("RapidAPI key not configured")
-        
-        # Check rate limit
-        if self.request_count >= self.max_requests_per_hour:
-            raise Exception("Rate limit exceeded. Please try again later.")
-        
-        default_headers = {
-            "X-RapidAPI-Key": self.rapidapi_key,
-            "X-RapidAPI-Host": ""
+    def _get_mock_response_DEPRECATED(self):
+        """Return comprehensive mock Amazon API response with 40+ products"""
+        return {
+            "status": "OK",
+            "data": {
+                "products": [
+                    # Casual Wear
+                    {"asin": "B0MOCK001", "product_title": "Men's Classic Cotton T-Shirt - Comfortable Casual Fit", "product_price": "$24.99", "product_original_price": "$29.99", "product_star_rating": "4.5", "product_num_ratings": 1234, "product_url": "https://www.amazon.com/dp/B0MOCK001", "product_photo": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400", "is_prime": True},
+                    {"asin": "B0MOCK003", "product_title": "Men's Slim Fit Jeans - Dark Wash Denim Casual", "product_price": "$45.99", "product_original_price": "$59.99", "product_star_rating": "4.3", "product_num_ratings": 567, "product_url": "https://www.amazon.com/dp/B0MOCK003", "product_photo": "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400", "is_prime": False},
+                    {"asin": "B0MOCK011", "product_title": "Men's Casual Hoodie - Fleece Pullover", "product_price": "$35.99", "product_original_price": "$45.99", "product_star_rating": "4.6", "product_num_ratings": 892, "product_url": "https://www.amazon.com/dp/B0MOCK011", "product_photo": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", "is_prime": True},
+                    {"asin": "B0MOCK012", "product_title": "Women's Casual Summer Dress - Floral Print", "product_price": "$39.99", "product_original_price": "$49.99", "product_star_rating": "4.7", "product_num_ratings": 1567, "product_url": "https://www.amazon.com/dp/B0MOCK012", "product_photo": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400", "is_prime": True},
+                    {"asin": "B0MOCK013", "product_title": "Women's Casual Denim Jacket - Light Wash", "product_price": "$52.99", "product_original_price": "$68.99", "product_star_rating": "4.6", "product_num_ratings": 678, "product_url": "https://www.amazon.com/dp/B0MOCK013", "product_photo": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400", "is_prime": False},
+                    {"asin": "B0MOCK014", "product_title": "Men's Casual Cargo Shorts - Cotton Blend", "product_price": "$28.99", "product_original_price": "$36.99", "product_star_rating": "4.4", "product_num_ratings": 445, "product_url": "https://www.amazon.com/dp/B0MOCK014", "product_photo": "https://images.unsplash.com/photo-1591195120140-d531256e280e?w=400", "is_prime": True},
+                    
+                    # Formal Wear
+                    {"asin": "B0MOCK005", "product_title": "Men's Formal Blazer - Business Professional Suit Jacket", "product_price": "$89.99", "product_original_price": "$120.00", "product_star_rating": "4.4", "product_num_ratings": 445, "product_url": "https://www.amazon.com/dp/B0MOCK005", "product_photo": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400", "is_prime": True},
+                    {"asin": "B0MOCK015", "product_title": "Men's Formal Dress Shirt - White Cotton", "product_price": "$32.99", "product_original_price": "$42.99", "product_star_rating": "4.5", "product_num_ratings": 1234, "product_url": "https://www.amazon.com/dp/B0MOCK015", "product_photo": "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400", "is_prime": True},
+                    {"asin": "B0MOCK016", "product_title": "Men's Formal Dress Pants - Slim Fit Trousers", "product_price": "$45.99", "product_original_price": "$59.99", "product_star_rating": "4.3", "product_num_ratings": 789, "product_url": "https://www.amazon.com/dp/B0MOCK016", "product_photo": "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400", "is_prime": True},
+                    {"asin": "B0MOCK017", "product_title": "Women's Formal Blazer - Office Professional", "product_price": "$75.99", "product_original_price": "$95.99", "product_star_rating": "4.7", "product_num_ratings": 567, "product_url": "https://www.amazon.com/dp/B0MOCK017", "product_photo": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400", "is_prime": True},
+                    {"asin": "B0MOCK018", "product_title": "Men's Formal Silk Tie - Classic Pattern", "product_price": "$19.99", "product_original_price": "$29.99", "product_star_rating": "4.6", "product_num_ratings": 342, "product_url": "https://www.amazon.com/dp/B0MOCK018", "product_photo": "https://images.unsplash.com/photo-1589756823695-278bc8d1c4d7?w=400", "is_prime": False},
+                    
+                    # Streetwear
+                    {"asin": "B0MOCK019", "product_title": "Streetwear Graphic Hoodie - Urban Style", "product_price": "$48.99", "product_original_price": "$62.99", "product_star_rating": "4.8", "product_num_ratings": 1891, "product_url": "https://www.amazon.com/dp/B0MOCK019", "product_photo": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=400", "is_prime": True},
+                    {"asin": "B0MOCK020", "product_title": "Streetwear Bomber Jacket - Hip Hop Fashion", "product_price": "$79.99", "product_original_price": "$99.99", "product_star_rating": "4.7", "product_num_ratings": 1234, "product_url": "https://www.amazon.com/dp/B0MOCK020", "product_photo": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400", "is_prime": True},
+                    {"asin": "B0MOCK021", "product_title": "Streetwear Cargo Pants - Tactical Urban", "product_price": "$55.99", "product_original_price": "$72.99", "product_star_rating": "4.5", "product_num_ratings": 892, "product_url": "https://www.amazon.com/dp/B0MOCK021", "product_photo": "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400", "is_prime": True},
+                    {"asin": "B0MOCK022", "product_title": "Streetwear Oversized T-Shirt - Bold Print", "product_price": "$32.99", "product_original_price": "$42.99", "product_star_rating": "4.6", "product_num_ratings": 678, "product_url": "https://www.amazon.com/dp/B0MOCK022", "product_photo": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400", "is_prime": False},
+                    
+                    # Athletic Wear
+                    {"asin": "B0MOCK004", "product_title": "Women's Athletic Leggings - High Waisted Yoga Pants", "product_price": "$28.99", "product_original_price": "$34.99", "product_star_rating": "4.6", "product_num_ratings": 2341, "product_url": "https://www.amazon.com/dp/B0MOCK004", "product_photo": "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?w=400", "is_prime": True},
+                    {"asin": "B0MOCK007", "product_title": "Men's Running Shoes - Lightweight Athletic Sneakers", "product_price": "$65.99", "product_original_price": "$85.00", "product_star_rating": "4.5", "product_num_ratings": 3421, "product_url": "https://www.amazon.com/dp/B0MOCK007", "product_photo": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400", "is_prime": True},
+                    {"asin": "B0MOCK023", "product_title": "Men's Athletic Compression Shirt - Gym Training", "product_price": "$24.99", "product_original_price": "$32.99", "product_star_rating": "4.7", "product_num_ratings": 1567, "product_url": "https://www.amazon.com/dp/B0MOCK023", "product_photo": "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=400", "is_prime": True},
+                    {"asin": "B0MOCK024", "product_title": "Women's Athletic Sports Bra - High Support", "product_price": "$29.99", "product_original_price": "$39.99", "product_star_rating": "4.8", "product_num_ratings": 2145, "product_url": "https://www.amazon.com/dp/B0MOCK024", "product_photo": "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400", "is_prime": True},
+                    {"asin": "B0MOCK025", "product_title": "Men's Athletic Training Shorts - Performance Fabric", "product_price": "$26.99", "product_original_price": "$35.99", "product_star_rating": "4.5", "product_num_ratings": 892, "product_url": "https://www.amazon.com/dp/B0MOCK025", "product_photo": "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400", "is_prime": False},
+                    
+                    # Party Wear
+                    {"asin": "B0MOCK026", "product_title": "Women's Party Evening Dress - Cocktail Sequin", "product_price": "$68.99", "product_original_price": "$89.99", "product_star_rating": "4.8", "product_num_ratings": 1234, "product_url": "https://www.amazon.com/dp/B0MOCK026", "product_photo": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=400", "is_prime": True},
+                    {"asin": "B0MOCK027", "product_title": "Men's Party Suit - Slim Fit Tuxedo", "product_price": "$149.99", "product_original_price": "$199.99", "product_star_rating": "4.7", "product_num_ratings": 678, "product_url": "https://www.amazon.com/dp/B0MOCK027", "product_photo": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400", "is_prime": True},
+                    {"asin": "B0MOCK028", "product_title": "Women's Party Heels - Elegant Evening Shoes", "product_price": "$54.99", "product_original_price": "$72.99", "product_star_rating": "4.6", "product_num_ratings": 445, "product_url": "https://www.amazon.com/dp/B0MOCK028", "product_photo": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400", "is_prime": False},
+                    
+                    # Traditional Wear
+                    {"asin": "B0MOCK029", "product_title": "Traditional Kurta - Ethnic Indian Wear", "product_price": "$42.99", "product_original_price": "$55.99", "product_star_rating": "4.7", "product_num_ratings": 1567, "product_url": "https://www.amazon.com/dp/B0MOCK029", "product_photo": "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400", "is_prime": True},
+                    {"asin": "B0MOCK030", "product_title": "Traditional Saree - Silk Ethnic Wear", "product_price": "$78.99", "product_original_price": "$102.99", "product_star_rating": "4.9", "product_num_ratings": 2341, "product_url": "https://www.amazon.com/dp/B0MOCK030", "product_photo": "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400", "is_prime": True},
+                    {"asin": "B0MOCK031", "product_title": "Traditional Sherwani - Wedding Ethnic Dress", "product_price": "$125.99", "product_original_price": "$165.99", "product_star_rating": "4.8", "product_num_ratings": 892, "product_url": "https://www.amazon.com/dp/B0MOCK031", "product_photo": "https://images.unsplash.com/photo-1583391733956-6c78276477e5?w=400", "is_prime": True},
+                    {"asin": "B0MOCK032", "product_title": "Traditional Lehenga - Ethnic Bridal Wear", "product_price": "$158.99", "product_original_price": "$208.99", "product_star_rating": "4.9", "product_num_ratings": 1234, "product_url": "https://www.amazon.com/dp/B0MOCK032", "product_photo": "https://images.unsplash.com/photo-1583391733956-6c78276477e5?w=400", "is_prime": True},
+                    {"asin": "B0MOCK033", "product_title": "Traditional Nehru Jacket - Ethnic Formal", "product_price": "$68.99", "product_original_price": "$89.99", "product_star_rating": "4.6", "product_num_ratings": 567, "product_url": "https://www.amazon.com/dp/B0MOCK033", "product_photo": "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400", "is_prime": False},
+                    
+                    # Additional Mix
+                    {"asin": "B0MOCK006", "product_title": "Women's Knit Sweater - Cozy Winter Pullover Casual", "product_price": "$42.99", "product_original_price": "$54.99", "product_star_rating": "4.8", "product_num_ratings": 1789, "product_url": "https://www.amazon.com/dp/B0MOCK006", "product_photo": "https://images.unsplash.com/photo-1584370848010-d7fe6bc767ec?w=400", "is_prime": True},
+                    {"asin": "B0MOCK009", "product_title": "Men's Polo Shirt - Classic Fit Casual Cotton", "product_price": "$29.99", "product_original_price": "$39.99", "product_star_rating": "4.4", "product_num_ratings": 912, "product_url": "https://www.amazon.com/dp/B0MOCK009", "product_photo": "https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=400", "is_prime": True},
+                    {"asin": "B0MOCK010", "product_title": "Women's Yoga Pants - Stretchy Comfortable Athletic Fit", "product_price": "$32.99", "product_original_price": "$44.99", "product_star_rating": "4.7", "product_num_ratings": 2156, "product_url": "https://www.amazon.com/dp/B0MOCK010", "product_photo": "https://images.unsplash.com/photo-1518310952931-b1de897abd40?w=400", "is_prime": True},
+                    {"asin": "B0MOCK034", "product_title": "Men's Leather Jacket - Casual Motorcycle Style", "product_price": "$118.99", "product_original_price": "$155.99", "product_star_rating": "4.7", "product_num_ratings": 892, "product_url": "https://www.amazon.com/dp/B0MOCK034", "product_photo": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400", "is_prime": True},
+                    {"asin": "B0MOCK035", "product_title": "Women's Cardigan - Casual Knit Sweater", "product_price": "$38.99", "product_original_price": "$50.99", "product_star_rating": "4.5", "product_num_ratings": 1234, "product_url": "https://www.amazon.com/dp/B0MOCK035", "product_photo": "https://images.unsplash.com/photo-1584370848010-d7fe6bc767ec?w=400", "is_prime": True},
+                    {"asin": "B0MOCK036", "product_title": "Men's Formal Oxford Shoes - Dress Leather", "product_price": "$72.99", "product_original_price": "$95.99", "product_star_rating": "4.6", "product_num_ratings": 678, "product_url": "https://www.amazon.com/dp/B0MOCK036", "product_photo": "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=400", "is_prime": True},
+                    {"asin": "B0MOCK037", "product_title": "Women's Sneakers - Casual Walking Shoes", "product_price": "$48.99", "product_original_price": "$64.99", "product_star_rating": "4.7", "product_num_ratings": 1567, "product_url": "https://www.amazon.com/dp/B0MOCK037", "product_photo": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400", "is_prime": False},
+                    {"asin": "B0MOCK038", "product_title": "Men's Chino Pants - Business Casual Trousers", "product_price": "$42.99", "product_original_price": "$56.99", "product_star_rating": "4.5", "product_num_ratings": 892, "product_url": "https://www.amazon.com/dp/B0MOCK038", "product_photo": "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=400", "is_prime": True},
+                    {"asin": "B0MOCK039", "product_title": "Women's Maxi Dress - Bohemian Summer Casual", "product_price": "$52.99", "product_original_price": "$68.99", "product_star_rating": "4.8", "product_num_ratings": 1789, "product_url": "https://www.amazon.com/dp/B0MOCK039", "product_photo": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400", "is_prime": True},
+                    {"asin": "B0MOCK040", "product_title": "Men's Windbreaker - Athletic Outdoor Jacket", "product_price": "$45.99", "product_original_price": "$59.99", "product_star_rating": "4.6", "product_num_ratings": 1234, "product_url": "https://www.amazon.com/dp/B0MOCK040", "product_photo": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400", "is_prime": True}
+                ]
+            }
         }
+    
+    def _make_request_DEPRECATED(self, url, params=None, headers=None):
+        """DEPRECATED - No longer using RapidAPI"""
+        # This method is no longer used
+        # We now use Fake Store API directly
+        pass
         
-        if headers:
-            default_headers.update(headers)
-        
-        try:
-            self.request_count += 1
-            response = requests.get(url, params=params, headers=default_headers, timeout=10)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"API request error: {str(e)}")
-            raise
+        # Original API code (disabled)
+        # if not self.rapidapi_key:
+        #     print("⚠️  Using mock data - RapidAPI key not configured")
+        #     return self._get_mock_response()
+        # 
+        # # Check rate limit
+        # if self.request_count >= self.max_requests_per_hour:
+        #     print("⚠️  Rate limit exceeded. Using mock data.")
+        #     return self._get_mock_response()
+        # 
+        # default_headers = {
+        #     "X-RapidAPI-Key": self.rapidapi_key,
+        #     "X-RapidAPI-Host": ""
+        # }
+        # 
+        # if headers:
+        #     default_headers.update(headers)
+        # 
+        # try:
+        #     self.request_count += 1
+        #     response = requests.get(url, params=params, headers=default_headers, timeout=10)
+        #     response.raise_for_status()
+        #     return response.json()
+        # except requests.exceptions.HTTPError as e:
+        #     if '429' in str(e):
+        #         print(f"⚠️  RapidAPI rate limit hit (429). Using mock data as fallback.")
+        #         return self._get_mock_response()
+        #     print(f"API request error: {str(e)}")
+        #     raise
+        # except requests.exceptions.RequestException as e:
+        #     print(f"API request error: {str(e)}")
+        #     raise
     
     def search_amazon_products(self, query, category=None, max_results=20, gender='unisex'):
         """
-        Search Amazon products using RapidAPI
+        Search fashion products using Fake Store API
         
         Args:
             query (str): Search query
@@ -100,40 +164,22 @@ class ProductAPIService:
             list: Formatted product list
         """
         # Check cache first
-        cache_key = self._get_cache_key('amazon', query, category=category)
+        cache_key = self._get_cache_key('fakestore', query, category=category, gender=gender)
         cached_data = self._get_from_cache(cache_key)
         if cached_data:
-            print(f"✓ Returning cached Amazon data for: {query}")
+            print(f"✓ Returning cached FakeStore data for: {query}")
             return cached_data
         
         try:
-            # Add gender to query for better filtering
-            gender_query = self._add_gender_to_query(query, gender)
+            print(f"🔍 Searching Platzi API for: {query} (gender: {gender})")
             
-            url = f"{self.amazon_api_base}/search"
-            params = {
-                "query": gender_query,
-                "country": "US",
-                "page": "1"
-            }
+            # Search using Platzi API
+            products = self.platzi_api.search_fashion(query, gender=gender, limit=max_results)
             
-            if category:
-                params["category_id"] = self._get_amazon_category_id(category)
-            
-            headers = {
-                "X-RapidAPI-Host": "real-time-amazon-data.p.rapidapi.com"
-            }
-            
-            print(f"🔍 Searching Amazon for: {query}")
-            print(f"URL: {url}")
-            print(f"Params: {params}")
-            
-            response_data = self._make_request(url, params=params, headers=headers)
-            print(f"✓ Amazon API response received")
-            print(f"Response data keys: {response_data.keys() if response_data else 'None'}")
-            
-            # Format and filter products by gender
-            products = self._format_amazon_products(response_data.get('data', {}).get('products', []), gender)
+            # Filter by category if specified
+            if category and category != 'all':
+                category_lower = category.lower()
+                products = [p for p in products if p.get('category', '').lower() == category_lower]
             
             # Limit results
             products = products[:max_results]
@@ -141,11 +187,11 @@ class ProductAPIService:
             # Cache results
             self._set_cache(cache_key, products)
             
-            print(f"✓ Fetched {len(products)} Amazon products for: {query}")
+            print(f"✓ Fetched {len(products)} fashion products from Platzi API")
             return products
             
         except Exception as e:
-            print(f"❌ Error fetching Amazon products: {str(e)}")
+            print(f"❌ Error fetching products from Platzi API: {str(e)}")
             import traceback
             traceback.print_exc()
             return []
@@ -198,66 +244,83 @@ class ProductAPIService:
             print(f"Error fetching Flipkart products: {str(e)}")
             return []
     
-    def get_products_by_category(self, category, source='amazon', max_results=30, gender='unisex'):
+    def get_products_by_category(self, category, source='fakestore', max_results=30, gender='unisex'):
         """
-        Get products for a specific category from Amazon
+        Get products for a specific category from Fake Store API
         
         Args:
-            category (str): Category name (Casual, Formal, Streetwear, etc.)
-            source (str): 'amazon' (Flipkart temporarily disabled)
+            category (str): Category name (Casual Wear, Formal Wear, etc.)
+            source (str): Data source (always 'fakestore' now)
             max_results (int): Maximum products to return
             gender (str): User gender for filtering
             
         Returns:
-            list: Product list from Amazon
+            list: Product list from Fake Store API
         """
-        # Map category to search queries (clothing focused)
-        category_queries = {
-            'Casual Wear': 'casual shirt tshirt jeans clothing',
-            'Formal Wear': 'formal blazer pants shirt clothing',
-            'Streetwear': 'streetwear hoodie jacket clothing',
-            'Athletic Wear': 'athletic sports gym clothing',
-            'Party Wear': 'party dress formal clothing',
-            'Traditional Wear': 'ethnic traditional wear clothing',
-            'Winter Wear': 'winter jacket coat sweater clothing',
-            'Summer Wear': 'summer tshirt shorts clothing'
-        }
+        print(f"🔍 Fetching {max_results} products for category: {category} (gender: {gender})")
         
-        query = category_queries.get(category, category.lower())
-        products = []
-        
-        # Only use Amazon for now
-        amazon_products = self.search_amazon_products(query, category, max_results, gender)
-        products.extend(amazon_products)
-        
-        return products[:max_results]
+        try:
+            # Get all fashion products from Platzi API
+            products = self.platzi_api.get_all_fashion_products(limit=max_results * 2)
+            
+            print(f"✓ Fetched {len(products)} total fashion products from Platzi API")
+            
+            # Filter by gender if specified
+            if gender and gender != 'unisex':
+                products = [p for p in products if p.get('gender', 'unisex').lower() == gender.lower()]
+                print(f"✓ After gender filter ({gender}): {len(products)} products")
+            
+            # Filter by category if specified (category matching is loose)
+            if category and category != 'all':
+                # Normalize category name (remove "Wear" suffix and make lowercase)
+                category_key = category.lower().replace(' wear', '').replace(' ', '')
+                
+                # Filter products that match the category
+                filtered = []
+                for p in products:
+                    product_category = p.get('category', '').lower()
+                    # Match if category keyword is in product category or vice versa
+                    if category_key in product_category or product_category in category_key:
+                        filtered.append(p)
+                
+                products = filtered
+                print(f"✓ After category filter ({category}): {len(products)} products")
+            
+            result = products[:max_results]
+            print(f"✓ Returning {len(result)} products for {category}")
+            return result
+            
+        except Exception as e:
+            print(f"❌ Error in get_products_by_category: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return []
     
     def get_trending_products(self, limit=20, gender='unisex'):
         """
-        Get trending products from Amazon
+        Get trending products from Fake Store API
         
         Args:
             limit (int): Number of trending products
             gender (str): User gender for filtering
             
         Returns:
-            list: Trending products
+            list: Trending products (all clothing products)
         """
-        trending_queries = [
-            'clothing bestseller',
-            'trending fashion apparel',
-            'popular clothing wear'
-        ]
+        print(f"Fetching trending products (limit: {limit}, gender: {gender})")
         
-        all_products = []
-        per_query_limit = limit // len(trending_queries)
+        # Get all fashion products from Platzi API
+        products = self.platzi_api.get_all_fashion_products(limit=limit * 2)
         
-        for query in trending_queries:
-            # Fetch from Amazon only
-            amazon = self.search_amazon_products(query, max_results=per_query_limit, gender=gender)
-            all_products.extend(amazon)
+        # Filter by gender if specified
+        if gender and gender != 'unisex':
+            products = [p for p in products if p.get('gender', 'unisex').lower() == gender.lower()]
         
-        return all_products[:limit]
+        # Sort by rating to get "trending" items
+        products.sort(key=lambda x: x.get('rating', 0), reverse=True)
+        
+        print(f"✓ Fetched {len(products)} trending products")
+        return products[:limit]
     
     def _format_amazon_products(self, raw_products, gender='unisex'):
         """

@@ -12,8 +12,11 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_API_URL || 'http://localhost:
  * @returns {Promise<Array>} Array of recommended products
  */
 export const getRecommendedProducts = async (interests, fashionStyle, gender, filters = {}) => {
+  console.log('🔍 getRecommendedProducts called with:', { interests, fashionStyle, gender, filters });
+  
   try {
     // Try to fetch from backend API
+    console.log('📡 Calling backend API:', `${API_BASE_URL}/api/recommendations`);
     const response = await axios.post(`${API_BASE_URL}/api/recommendations`, {
       interests,
       fashionStyle,
@@ -23,12 +26,16 @@ export const getRecommendedProducts = async (interests, fashionStyle, gender, fi
       timeout: 5000 // 5 second timeout
     });
 
+    console.log('✅ Backend response:', response.data);
     return response.data.products;
   } catch (error) {
-    console.warn('Backend API not available, using mock data:', error.message);
+    console.warn('⚠️ Backend API not available, using mock data:', error.message);
+    console.log('📦 Falling back to mock data filtering');
     
     // Fallback to mock data with client-side filtering
-    return filterMockProducts(mockProducts, interests, fashionStyle, gender, filters);
+    const filtered = filterMockProducts(mockProducts, interests, fashionStyle, gender, filters);
+    console.log(`✅ Filtered ${filtered.length} mock products`);
+    return filtered;
   }
 };
 
@@ -73,14 +80,28 @@ const filterMockProducts = (products, interests, fashionStyle, gender, filters) 
 
   // Calculate relevance scores based on interests
   if (interests && interests.length > 0) {
+    console.log('📊 Filtering by interests:', interests);
+    
     filtered = filtered.map(product => {
       let relevanceScore = 0;
       const productText = `${product.title} ${product.category} ${product.tags?.join(' ')}`.toLowerCase();
       
       interests.forEach(interest => {
-        if (productText.includes(interest.toLowerCase())) {
-          relevanceScore += 0.3;
+        // Match full interest or individual words
+        const interestLower = interest.toLowerCase();
+        const interestWords = interestLower.split(' ');
+        
+        // Check full interest match
+        if (productText.includes(interestLower)) {
+          relevanceScore += 0.5;
         }
+        
+        // Check individual words (e.g., "Traditional Wear" -> "traditional" or "wear")
+        interestWords.forEach(word => {
+          if (word.length > 3 && productText.includes(word)) {
+            relevanceScore += 0.2;
+          }
+        });
       });
 
       // Boost score if fashion style matches
@@ -93,12 +114,24 @@ const filterMockProducts = (products, interests, fashionStyle, gender, filters) 
       
       return {
         ...product,
-        relevanceScore: relevanceScore || 0.5 // Default relevance if no match
+        relevanceScore: relevanceScore || 0.1 // Low default relevance if no match
       };
     });
 
     // Sort by relevance score
     filtered.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    
+    // Only return products with some relevance (score > 0.1)
+    filtered = filtered.filter(p => p.relevanceScore > 0.1);
+    
+    console.log(`📊 Filtered products by relevance: ${filtered.length} products found`);
+    if (filtered.length > 0) {
+      console.log('Top 3 matches:', filtered.slice(0, 3).map(p => ({
+        title: p.title,
+        score: p.relevanceScore,
+        category: p.category
+      })));
+    }
   }
 
   return filtered;

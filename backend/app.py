@@ -99,17 +99,32 @@ def get_recommendations():
             )
         else:
             # Fetch based on user interests with gender filter
-            for interest in interests[:3]:  # Limit to first 3 interests to reduce API calls
+            if interests and len(interests) > 0:
+                for interest in interests[:3]:  # Limit to first 3 interests to reduce API calls
+                    print(f"Fetching products for interest: {interest}")
+                    amazon_products = product_api_service.search_amazon_products(
+                        query=interest,
+                        max_results=20,
+                        gender=gender
+                    )
+                    print(f"Got {len(amazon_products)} products for {interest}")
+                    products.extend(amazon_products)
+            else:
+                # No interests specified, fetch general products
+                print("No interests specified, fetching general products")
                 amazon_products = product_api_service.search_amazon_products(
-                    query=interest,
-                    max_results=20,
+                    query="clothing fashion",
+                    max_results=30,
                     gender=gender
                 )
                 products.extend(amazon_products)
         
         # If no products found, get some trending items
         if not products:
+            print("No products found, fetching trending items")
             products = product_api_service.get_trending_products(limit=30, gender=gender)
+        
+        print(f"Total products collected: {len(products)}")
         
         # Get recommendations using ML model
         recommendations = recommendation_engine.get_recommendations(
@@ -118,6 +133,8 @@ def get_recommendations():
             filters=filters,
             top_n=20
         )
+        
+        print(f"Generated {len(recommendations)} recommendations")
         
         return jsonify({
             'status': 'success',
@@ -332,7 +349,8 @@ def get_all_products():
                 'Athletic Wear', 'Party Wear', 'Traditional Wear'
             ]
             
-            per_category = limit // len(categories)
+            # Calculate products per category, ensuring at least 1 per category
+            per_category = max(1, limit // len(categories))
             
             for cat in categories:
                 print(f"Fetching {per_category} products for: {cat}")

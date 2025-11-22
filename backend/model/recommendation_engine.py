@@ -65,7 +65,12 @@ class RecommendationEngine:
         Returns:
             list: Sorted list of recommended products with relevance scores
         """
+        print(f"🤖 Recommendation engine: Received {len(products)} products")
+        print(f"🤖 User profile: {user_profile}")
+        print(f"🤖 Filters: {filters}")
+        
         if not products:
+            print("⚠️  No products to recommend!")
             return []
         
         # Create user preference text
@@ -129,7 +134,12 @@ class RecommendationEngine:
             products_with_scores.sort(key=lambda x: x['relevanceScore'], reverse=True)
             
             # Apply post-processing filters
+            print(f"🤖 Before filtering: {len(products_with_scores)} products")
             filtered_products = self._apply_filters(products_with_scores, filters)
+            print(f"🤖 After filtering: {len(filtered_products)} products")
+            
+            if len(filtered_products) > 0:
+                print(f"🤖 Top product: {filtered_products[0].get('title', 'Unknown')} (score: {filtered_products[0].get('relevanceScore', 0):.3f})")
             
             # Return top N recommendations
             return filtered_products[:top_n]
